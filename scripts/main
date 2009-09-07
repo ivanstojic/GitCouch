@@ -1,0 +1,36 @@
+#!/bin/bash
+. ./config
+. ./scripts/includes
+
+
+
+function http_mainHandler {
+    utils_log "Received request method $http_request_method for URI $http_request_uri"
+
+    case $http_request_method in
+	GET)
+	    http_handleGET
+	    ;;
+	PUT)
+	    http_handlePUT
+	    ;;
+	DELETE)
+	    http_handleDELETE
+	    ;;
+	POST)
+	    http_handlePOST
+	    ;;
+	*)
+	    echo "What the fuck?\n"
+    esac
+}
+
+# This is the entry point...
+
+utils_log "Starting new request..."
+
+util_http_parseHTTPRequest
+http_mainHandler
+
+
+

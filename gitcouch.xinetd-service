@@ -1,0 +1,10 @@
+service gitcouch
+{
+	port                = 5984
+        socket_type         = stream
+        protocol            = tcp
+        wait                = no
+	instances           = 10
+        user                = nobody
+        server              = /path/to/your/copy/of/gitcouch
+}

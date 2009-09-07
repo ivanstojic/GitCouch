@@ -1,0 +1,10 @@
+# You shouldn't really need to modify these, sorry :-p
+
+CFG_VERSION="0.1"
+
+CFG_REPO=root_repo
+CFG_WORKING=working_repos
+
+CFG_BASE=databases
+CFG_OBJECTS=objects
+

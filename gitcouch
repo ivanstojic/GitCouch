@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Set CFG_ROOT to the *FULL PATH* of the directory in which GitCouch is installed
+CFG_ROOT=/Users/ivans/Documents/gitcouch
+
+#
+# You should not need to modify anything beneath this line
+#
+
+cd $CFG_ROOT
+. ./scripts/main

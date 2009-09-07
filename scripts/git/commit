@@ -1,0 +1,10 @@
+#!/bin/bash
+
+function git_commit {
+    (
+	cd $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE
+
+	git add . > /dev/null 2>&1
+	git commit -a -m "$1" > /dev/null 2>&1
+    )
+}

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+function git_push {
+    (
+	cd $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO
+	git push > /dev/null 2>&1
+    )
+
+    # TODO: Remove the old repo...
+}

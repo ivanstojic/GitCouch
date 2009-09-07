@@ -1,0 +1,11 @@
+#!/bin/bash
+
+function git_clone {
+    utils_log "Cloning the repository..."
+    mkdir $CFG_ROOT/$CFG_WORKING/$$
+
+    (
+	cd $CFG_ROOT/$CFG_WORKING/$$
+	git clone $CFG_ROOT/$CFG_REPO > /dev/null 2>&1
+    )
+}

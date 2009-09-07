@@ -1,0 +1,8 @@
+RewriteEngine On
+RewriteOptions
+
+RewriteBase /
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule .* http://127.0.0.1:5984/$0 [P]
+

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+function util_getUUID {
+    echo -ne `dd if=/dev/urandom count=1 2>/dev/null | md5`
+}

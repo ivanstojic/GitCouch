@@ -1,0 +1,6 @@
+#!/bin/bash
+
+rm -rf working_repos/*
+rm -rf root_repo
+cp -R backup_empty_root_repo root_repo
+

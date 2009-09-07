@@ -1,0 +1,22 @@
+#!/bin/bash
+
+function utils_json_docsToArray {
+    local i=0
+    local docs
+    
+    while [ "" != "$1" ]; do
+	file=$1
+	shift
+	
+	if [ "$i" == "0" ]; then
+            docs="{id: \"$file\", value: `cat $file`}"
+
+	else
+            docs="$docs, {id: \"$file\", value: `cat $file`}"
+	fi
+
+	let i++
+    done
+
+    echo $docs
+}

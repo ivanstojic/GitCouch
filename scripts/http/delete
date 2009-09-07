@@ -1,0 +1,79 @@
+#!/bin/bash
+
+
+function http_delete_database {
+    local database=$1
+
+
+    utils_log "Deleting database $database... "
+    
+    if [ -d $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database ]; then
+	# Delete a database...
+	rm -rf $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database
+
+	git_commit "Deleting database $database"
+	git_push
+
+	util_http_generateResponse 200 "OK" "text/json"
+	echo -ne "{\"ok\": true}"
+
+    else
+	util_http_generateResponse 404 "OK" "text/json"
+	echo -ne "{\"ok\": false, \"error\": \"Database $database does not exist\"}"
+    fi
+}
+
+
+function http_delete_document {
+    local database=$1
+    local document=$2
+
+
+    if [ -f $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS/$document ]; then
+
+	util_http_generateResponse 200 "Deleted" "text/json"
+
+	rm $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS/$document
+
+	git_commit "Deleting document $document"
+	git_push $$
+
+
+	what=$CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS
+	(
+	    cd $what
+	    revision=`git log -1 --pretty=oneline $what | cut -c 1-40`
+	    utils_log "{\"ok\": true, \"rev\": \"$revision\"}"
+	    echo -ne "{\"ok\": true, \"rev\": \"$revision\"}"
+	)
+
+    else
+	util_http_generateResponse 404 "Not found" "text/json"
+	echo -ne "{\"ok\": false, \"error\": \"Document $document does not exist\"}"
+    fi
+}
+
+
+function http_handleDELETE {
+    local database=${req_path_component[0]}
+    local document=${req_path_component[1]}
+
+    git_clone
+
+
+    if [ "" == "$database" -a "" == "$document" ]; then
+	echo -ne "{\"ok\": false, \"error\": \"Neither document nor database specified\"}"
+
+    elif [ "" != "$database" -a "" == "$document" ]; then
+	http_delete_database $database
+	
+    else
+	http_delete_document $database $document
+	
+    fi
+}
+
+
+
+
+

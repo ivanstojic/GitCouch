@@ -1,0 +1,75 @@
+#!/bin/bash
+
+
+function http_post_temporaryView {
+    local database=${req_path_component[0]}
+
+    utils_log "Starting temp view processing for $database"
+
+    git_clone
+
+    local mainjs=`cat ./scripts/js/view.js`
+    local utiljs=`cat ./scripts/js/reduce.js`
+
+    local docnames=`(cd $CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS; util_powerLS $req_filter_key)`
+
+    local docs=`(cd $CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS; utils_json_docsToArray $docnames)`
+
+    local function=`dd if=/dev/stdin of=/dev/stdout bs=$req_header_content_length count=1 2> /dev/null`
+
+
+    utils_log "Documents: $alldocs"
+
+    local input=`cat <<EOF
+var inputDocuments = [$docs];
+var mapConstruct = $function;
+
+$utiljs
+$mainjs
+
+processInput();
+
+EOF
+`
+
+    utils_log "Code: $input"
+
+    utils_log "-----------------------------------"
+
+    local viewresult=`couchjs - <<< $input`
+
+    utils_log "Result: $viewresult"
+
+    echo $viewresult
+}
+
+
+function http_handlePOST {
+    local database=${req_path_component[0]}
+    local document=${req_path_component[1]}
+
+    utils_log "Post length is $req_header_content_length"
+
+    if [ "" == "$database" -a "" ]; then
+	util_http_generateResponse 500 "Internal Server Error" "text/json"
+	echo -ne "{\"ok\": false, \"error\": \"No database specified in the POST request. Ouch.\"}"
+
+    elif [ "_temp_view" == "$document" ]; then
+	# The database is set, the docid indicates that the client wants the result of a temp view
+	util_http_generateResponse 200 "OK" "text/json"
+
+	http_post_temporaryView
+	
+
+    elif [ "" == "$document" ]; then
+	# We have a database, and no document, the client wants us to generate a docid for them
+
+	req_path_component[1]=`dd if=/dev/random count=1 2>/dev/null | md5`
+
+	utils_log "Set the document name to ${req_path_component[1]} and dispatching"
+
+	# Hope this works...
+	http_handlePUT
+	
+    fi
+}

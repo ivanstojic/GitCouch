@@ -1,0 +1,5 @@
+#!/bin/bash
+
+function utils_log {
+    echo `date +'%Y-%m-%d %H:%M'` $$ $1 >> event.log
+}

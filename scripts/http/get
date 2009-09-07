@@ -1,0 +1,127 @@
+#!/bin/bash
+
+function http_get_hello {
+    util_http_generateResponse 200 "OK" "text/json"
+
+    echo -ne "{\"couchdb\": \"Welcome\", \"version\": \"GitCouch $CFG_VERSION\"}"
+}
+
+
+
+function http_get_allDatabases {
+    git_clone
+    util_http_generateResponse 200 "OK" "text/json"
+
+    (
+	cd $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE
+	find . \
+	    -maxdepth 1 -type d | \
+	    sed -ne '
+1 i\
+[
+
+/^\.$/ !{
+  s#\./\(.*\)#"\1"#
+  $ !{
+    s#$#,#
+  }
+  p
+}
+
+$ a\
+]
+'
+    )
+}
+
+
+
+function http_get_databaseMetainfo {
+    database=$1
+    
+    git_clone
+    util_http_generateResponse 200 "OK" "text/json"
+
+    (
+	cd $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS
+	count=`ls -1 | wc -l`
+	disksize=`du . | sed -e 's/\([0-9]*\).*$/\1/'`
+
+	echo -ne "{\"db_name\": \"$database\", \"doc_count\":$count, \"doc_del_count\":0, \"update_seq\":0, \"compact_running\":false, \"disk_size\":$disksize}"
+    )
+}
+
+
+
+function http_get_documentList {
+    database=$1
+
+    git_clone
+    util_http_generateResponse 200 "OK" "text/json"
+
+    (
+	cd $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS
+	count=`util_powerLS $req_filter_key | wc -l`
+
+	echo "{\"total_rows\": $count, \"rows\": ["
+
+	let position=1
+	for docid in `util_powerLS $req_filter_key`; do
+	    revision=`git hash-object $docid`
+	    
+	    echo -n "   {\"id\": \"$docid\", \"key\": \"$docid\", \"value\": { \"rev\": \"$revision\" }}"
+	    if [ "$position" -lt "$count" ]; then
+		echo -ne ","
+	    fi
+
+	    echo
+	done
+	
+	echo -ne " ]}";
+    )
+}
+
+
+function http_get_document {
+    database=$1
+    document=$2
+    
+    git_clone
+    
+    if [ -f $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS/$document ]; then
+	util_http_generateResponse 200 "OK" "text/json"
+	cat $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS/$document
+
+    else
+	util_http_generateResponse 404 "Not Found" "text/json"
+	echo -ne '{"ok": false, "error": "Document $document not found in database $database"}'
+    fi
+}
+
+
+function http_handleGET {
+    local database=${req_path_component[0]}
+    local document=${req_path_component[1]}
+
+    if [ "" == "$database" -a "" == "$document" ]; then
+	http_get_hello
+
+    elif [ "" != "$database" -a "" == "$document" ]; then
+	if [ "_all_dbs" == "$database" ]; then
+	    http_get_allDatabases
+
+	else
+	    http_get_databaseMetainfo $database
+	fi
+
+    else
+	if [ "_all_docs" == "$document" ]; then
+	    http_get_documentList $database
+
+	else
+	    http_get_document $database $document
+	fi
+    fi
+}
+
+

@@ -1,0 +1,107 @@
+#!/bin/bash
+
+function util_http_parseHeaders {
+	local line
+	IFS=$IFS$'\r'
+
+	read line
+	while [ "" != "$line" ]; do
+	    echo -ne $line '---'
+	    read line
+	done
+}
+
+
+function util_http_generateResponse {
+    echo -ne "HTTP/1.0 $1 $2\r\n"
+    echo -ne "Server: GitCouch $CFG_VERSION\r\n"
+    echo -ne "Content-Type: $3\r\n\r\n"
+}
+
+
+function util_http_parseURIPath {
+    [[ $1 =~ (([^/]*)/?)?(([^/]*)/?)? ]]
+
+    local count=${#BASH_REMATCH[*]}
+    local i=2
+    local j=0
+
+    while [ $i -lt $count ]; do
+	req_path_component[$j]=${BASH_REMATCH[$i]}
+	let i=i+2
+	let j++
+    done
+}
+
+
+function util_http_parseURIQuery {
+    local args=$1
+    
+    while [ "" != "$args" ]; do
+	[[ $args =~ (([^=&]*)=([^=&]*))(&(.*))? ]]
+
+	eval "req_arg_${BASH_REMATCH[2]}=${BASH_REMATCH[3]}"
+
+	args=${BASH_REMATCH[5]}
+    done
+}
+
+
+function util_http_setupPowerLS {
+    req_filter_key=
+
+    if [ "" != "$req_arg_startkey" ]; then
+	req_arg_startkey=`echo $req_arg_startkey | sed -e "s/^%22//" -e "s/%22$//"`
+	req_filter_key="$req_filter_key > $req_arg_startkey"
+    fi
+
+    if [ "" != "$req_arg_endkey" ]; then
+	req_arg_endkey=`echo $req_arg_endkey | sed -e "s/^%22//" -e "s/%22$//"`
+	req_filter_key="$req_filter_key < $req_arg_endkey"
+    fi
+}
+
+
+function util_http_parseURI {
+    local uri=$1
+
+    [[ $uri =~ /([^?]*)(\?(.*))? ]]
+
+    local path=${BASH_REMATCH[1]}
+    local args=${BASH_REMATCH[3]}
+
+    util_http_parseURIPath $path
+    util_http_parseURIQuery $args
+
+    util_http_setupPowerLS
+}
+
+
+function utils_http_parseHeaders {
+    local line
+    IFS=$IFS$'\r'
+	
+    read line
+    while [ "" != "$line" ]; do
+	[[ $line =~ (([^:]*): (.*)) ]]
+
+	local name=${BASH_REMATCH[2]}
+	local value=${BASH_REMATCH[3]}
+
+	if [ "" != "$name" ]; then
+	    local trans=`tr "A-Z-" "a-z_" <<< "$name"`
+
+	    eval "req_header_$trans='$value'"
+	fi
+
+	read line
+    done
+}
+
+function util_http_parseHTTPRequest {
+    read http_request_method http_request_uri http_request_version
+
+    util_http_parseURI $http_request_uri
+    utils_http_parseHeaders
+}
+

@@ -1,0 +1,72 @@
+#!/bin/bash
+
+
+function http_put_uploadDocument {
+    local database=${req_path_component[0]}
+    local document=${req_path_component[1]}
+    
+
+    utils_log "Writing $document in $database..."
+    
+    # Updating a document
+    # TODO: No revision checking is performed right now :-(
+    git_clone
+
+    if [ -d $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database ]; then
+	dd if=/dev/stdin of=$CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS/$document bs=$req_header_content_length count=1 2> /dev/null
+
+	rev=`git hash-object $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS/$document`
+
+	util_http_generateResponse 201 "Created" "text/json"
+
+	echo -ne "{\"ok\": true, \"id\": \"$document\", \"rev\": \"$rev\"}"
+	
+	git_commit "Updated contents of document $document"
+	git_push
+	    
+    else
+	util_http_generateResponse 404 "Database not found" "text/plain"
+	echo -ne "There's no such database here."
+    fi
+}
+
+
+
+function http_put_createDatabase {
+    local database=${req_path_component[0]}
+    local document=${req_path_component[1]}
+
+    # Creating a database, who the fuck came up with the API :-(
+    git_clone
+
+    if [ ! -d $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database ]; then
+	mkdir $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database
+	touch $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/.gitignore
+
+	mkdir $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS
+	touch $CFG_ROOT/$CFG_WORKING/$$/$CFG_REPO/$CFG_BASE/$database/$CFG_OBJECTS/.gitignore
+
+	git_commit "Creating database $database"
+	git_push
+
+	util_http_generateResponse 201 "Created" "text/json"
+	echo -ne "{\"ok\": true}"
+
+    else
+	util_http_generateResponse 500 "OK" "text/json"
+	echo -ne "{\"ok\": false, \"error\": \"Database already exists\"}"	
+    fi
+}
+
+
+
+function http_handlePUT {
+    local document=${req_path_component[1]}
+    
+    if [ "" != "$document" ]; then
+	http_put_uploadDocument
+	
+    else
+	http_put_createDatabase
+    fi
+}
